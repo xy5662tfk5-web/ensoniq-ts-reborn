@@ -1,0 +1,61 @@
+name: Build TS Reborn for Intel Mac
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - macos-intel-au
+
+jobs:
+  build:
+    # GitHub-hosted Intel runner; target Monterey x86_64.
+    runs-on: macos-15-intel
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: |
+          brew install cmake ninja
+
+      - name: Configure Intel macOS build
+        run: |
+          cmake -S . -B build-macos-intel -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DENS_BUILD_APP=ON
+
+      - name: Build app, AU, VST3 and tests
+        run: |
+          cmake --build build-macos-intel --parallel 2 --target \
+            TSReborn_Standalone TSReborn_AU TSReborn_VST3 TSReborn_AppTests
+
+      - name: Run tests
+        run: |
+          ctest --test-dir build-macos-intel --output-on-failure
+
+      - name: Package application and plugins
+        run: |
+          mkdir -p dist
+          find build-macos-intel -type d \( -name "TS Reborn.app" -o -name "TS Reborn.component" -o -name "TS Reborn.vst3" \) -prune -print
+          APP="$(find build-macos-intel -type d -name 'TS Reborn.app' -print -quit)"
+          AU="$(find build-macos-intel -type d -name 'TS Reborn.component' -print -quit)"
+          VST3="$(find build-macos-intel -type d -name 'TS Reborn.vst3' -print -quit)"
+          test -n "$APP"
+          test -n "$AU"
+          test -n "$VST3"
+          ditto "$APP" "dist/TS Reborn.app"
+          ditto "$AU" "dist/TS Reborn.component"
+          ditto "$VST3" "dist/TS Reborn.vst3"
+          ditto -c -k --sequesterRsrc --keepParent dist "TS-Reborn-macOS-Intel-Monterey.zip"
+
+      - name: Upload macOS Intel build
+        uses: actions/upload-artifact@v4
+        with:
+          name: TS-Reborn-macOS-Intel-Monterey
+          path: TS-Reborn-macOS-Intel-Monterey.zip
+          if-no-files-found: error
+          retention-days: 14
