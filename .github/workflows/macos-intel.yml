@@ -29,14 +29,17 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DENS_BUILD_APP=ON
 
-      - name: Build app, AU, VST3 and tests
+      - name: Build app, plugins and available test suites
         run: |
           cmake --build build-macos-intel --parallel 2 --target \
-            TSReborn_Standalone TSReborn_AU TSReborn_VST3 TSReborn_AppTests
+            TSReborn_Standalone TSReborn_AU TSReborn_VST3 TSReborn_AppTests \
+            ens_tests ens_rt_tests
 
-      - name: Run tests
+      - name: Run test suites
         run: |
-          ctest --test-dir build-macos-intel --output-on-failure
+          # m68k_suite requires external Tom Harte .m68t test data,
+          # which is not included in this repository checkout.
+          ctest --test-dir build-macos-intel --output-on-failure -E '^m68k_suite$'
 
       - name: Package application and plugins
         run: |
