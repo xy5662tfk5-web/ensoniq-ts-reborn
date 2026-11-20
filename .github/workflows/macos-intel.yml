@@ -1,4 +1,5 @@
 name: Build TS Reborn for Intel Mac
+# Produces app, AU and VST3 packages for macOS 12+.
 
 on:
   workflow_dispatch:
